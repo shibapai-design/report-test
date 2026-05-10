@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地推消耗仪表盘 2026-05</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0f0f1a; color: #e8e8f0; min-height: 100vh; }
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 24px 40px; border-bottom: 1px solid #2a2a4a; }
+.header h1 { font-size: 22px; font-weight: 600; color: #fff; letter-spacing: 1px; }
+.header p { font-size: 13px; color: #8888aa; margin-top: 4px; }
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 24px 40px; }
+.kpi-card { background: linear-gradient(135deg, #1e1e3a 0%, #252545 100%); border-radius: 12px; padding: 20px 24px; border: 1px solid #2e2e50; position: relative; overflow: hidden; }
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-card.orange::before { background: linear-gradient(90deg, #ff8c00, #ff5500); }
+.kpi-card.blue::before { background: linear-gradient(90deg, #0070f3, #0041b8); }
+.kpi-card.green::before { background: linear-gradient(90deg, #00c853, #009624); }
+.kpi-card.purple::before { background: linear-gradient(90deg, #9c27b0, #6a1b9a); }
+.kpi-label { font-size: 12px; color: #8888aa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 700; color: #fff; }
+.kpi-sub { font-size: 11px; color: #6666aa; margin-top: 4px; }
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0 40px 24px; }
+.chart-card { background: #1a1a2e; border-radius: 12px; padding: 20px; border: 1px solid #2a2a4a; }
+.chart-title { font-size: 14px; font-weight: 600; color: #b0b0cc; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #2a2a4a; }
+.chart { height: 260px; width: 100%; }
+.chart-full { grid-column: 1 / -1; }
+.chart-full .chart { height: 300px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 本地推消耗仪表盘</h1>
+  <p>数据周期：2026-05-01 ~ 2026-05-09 &nbsp;|&nbsp; 更新于 2026-05-10</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card orange">
+    <div class="kpi-label">上一日合计消耗</div>
+    <div class="kpi-value">¥5,315.18</div>
+    <div class="kpi-sub">2026-05-09（周六）</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label">月合计消耗</div>
+    <div class="kpi-value">¥67,843.76</div>
+    <div class="kpi-sub">2026年5月 累计</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">月线索金额</div>
+    <div class="kpi-value">¥40,589.79</div>
+    <div class="kpi-sub">占比 59.8%</div>
+  </div>
+  <div class="kpi-card purple">
+    <div class="kpi-label">月交易金额</div>
+    <div class="kpi-value">¥27,253.97</div>
+    <div class="kpi-sub">占比 40.2%</div>
+  </div>
+</div>
+
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">📈 每日消耗趋势</div>
+    <div id="chart1" class="chart"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">🥧 月度消耗占比</div>
+    <div id="chart2" class="chart"></div>
+  </div>
+  <div class="chart-card chart-full">
+    <div class="chart-title">📊 每日消耗明细（线索/交易 × 短视频/直播）</div>
+    <div id="chart3" class="chart"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">🔍 上一日消耗结构（2026-05-09）</div>
+    <div id="chart4" class="chart"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">📋 日消耗柱状图</div>
+    <div id="chart5" class="chart"></div>
+  </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<script>
+(function() {
+  // 日期（对应真实星期）
+  // 05-01(周五) 05-02(周六) 05-03(周日) 05-04(周一) 05-05(周二)
+  // 05-06(周三) 05-07(周四) 05-08(周五) 05-09(周六)
+  var dates = ['05-01
+周五','05-02
+周六','05-03
+周日','05-04
+周一','05-05
+周二','05-06
+周三','05-07
+周四','05-08
+周五','05-09
+周六'];
+
+  var total_list = [10610.72,12538.12,12004.24,9576.76,5925.03,3215.14,4061.20,4597.37,5315.18];
+  var clue_list  = [5224.70,5832.22,5584.90,4970.75,4201.48,2654.83,3897.04,3924.82,4299.05];
+  var trade_list = [5386.02,6705.90,6419.34,4606.01,1723.55,560.31,164.16,672.55,1016.13];
+  var nonlive_clue  = [4425.48,5032.22,4749.69,4175.76,3342.62,2604.84,3850.05,3197.77,3426.89];
+  var nonlive_trade = [1891.87,2209.96,1696.53,899.74,500.00,182.74,164.16,299.16,397.69];
+  var live_clue     = [799.22,800.00,835.21,794.99,858.86,49.99,46.99,727.05,872.16];
+  var live_trade    = [3494.15,4495.94,4722.81,3706.27,1223.55,377.57,0.00,373.39,618.44];
+
+  function yAxisFmt(v) { return '¥' + (v/1000).toFixed(0) + 'k'; }
+  function labelFmt(v) { return '¥' + v; }
+  function makeTooltip() { return { trigger: 'axis', backgroundColor: '#1e1e3a', borderColor: '#2e2e50', textStyle: { color: '#e8e8f0' } }; }
+  function makeAxis() { return { axisLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#8888aa' } }; }
+
+  var chart1 = echarts.init(document.getElementById('chart1'));
+  chart1.setOption({
+    backgroundColor: 'transparent',
+    tooltip: makeTooltip(),
+    legend: { data: ['总消耗','线索','交易'], textStyle: { color: '#8888aa' }, top: 5 },
+    grid: { top: 40, bottom: 30, left: 60, right: 20 },
+    xAxis: { type: 'category', data: dates, boundaryGap: false, ...makeAxis(), axisLabel: { color: '#8888aa', fontSize: 10 } },
+    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#8888aa', formatter: yAxisFmt } },
+    series: [
+      { name: '总消耗', type: 'line', data: total_list, smooth: true, lineStyle: { color: '#ff8c00', width: 3 }, itemStyle: { color: '#ff8c00' } },
+      { name: '线索', type: 'line', data: clue_list, smooth: true, lineStyle: { color: '#00c853', width: 2 }, itemStyle: { color: '#00c853' } },
+      { name: '交易', type: 'line', data: trade_list, smooth: true, lineStyle: { color: '#0070f3', width: 2 }, itemStyle: { color: '#0070f3' } }
+    ]
+  });
+
+  var chart2 = echarts.init(document.getElementById('chart2'));
+  chart2.setOption({
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'item', backgroundColor: '#1e1e3a', borderColor: '#2e2e50', textStyle: { color: '#e8e8f0' } },
+    legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: '#8888aa' } },
+    series: [{
+      type: 'pie', radius: ['40%','70%'], center: ['35%','50%'],
+      data: [
+        { value: 40589.79, name: '线索', itemStyle: { color: '#00c853' } },
+        { value: 27253.97, name: '交易', itemStyle: { color: '#0070f3' } }
+      ],
+      label: { color: '#b0b0cc', formatter: '{b}
+¥{c}' },
+      labelLine: { lineStyle: { color: '#2a2a4a' } }
+    }]
+  });
+
+  var chart3 = echarts.init(document.getElementById('chart3'));
+  chart3.setOption({
+    backgroundColor: 'transparent',
+    tooltip: makeTooltip(),
+    legend: { data: ['线索-短视频','线索-直播','交易-短视频','交易-直播'], textStyle: { color: '#8888aa' }, top: 5 },
+    grid: { top: 40, bottom: 30, left: 60, right: 20 },
+    xAxis: { type: 'category', data: dates, ...makeAxis(), axisLabel: { color: '#8888aa', fontSize: 10 } },
+    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#8888aa', formatter: yAxisFmt } },
+    series: [
+      { name: '线索-短视频', type: 'bar', stack: '线索', data: nonlive_clue, itemStyle: { color: '#00e676' } },
+      { name: '线索-直播', type: 'bar', stack: '线索', data: live_clue, itemStyle: { color: '#69f0ae' } },
+      { name: '交易-短视频', type: 'bar', stack: '交易', data: nonlive_trade, itemStyle: { color: '#2979ff' } },
+      { name: '交易-直播', type: 'bar', stack: '交易', data: live_trade, itemStyle: { color: '#448aff' } }
+    ]
+  });
+
+  var chart4 = echarts.init(document.getElementById('chart4'));
+  chart4.setOption({
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', backgroundColor: '#1e1e3a', borderColor: '#2e2e50', textStyle: { color: '#e8e8f0' } },
+    grid: { top: 10, bottom: 30, left: 110, right: 40 },
+    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#8888aa', formatter: labelFmt } },
+    yAxis: { type: 'category', data: ['交易-直播','交易-短视频','线索-直播','线索-短视频'], axisLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#b0b0cc', fontSize: 12 } },
+    series: [{
+      type: 'bar', data: [618.44, 397.69, 872.16, 3426.89],
+      itemStyle: { color: ['#448aff','#2979ff','#69f0ae','#00e676'] },
+      label: { show: true, position: 'right', color: '#8888aa', formatter: function(p) { return '¥' + p.value.toLocaleString(); } },
+      barWidth: 24
+    }]
+  });
+
+  var chart5 = echarts.init(document.getElementById('chart5'));
+  chart5.setOption({
+    backgroundColor: 'transparent',
+    tooltip: makeTooltip(),
+    grid: { top: 10, bottom: 30, left: 60, right: 20 },
+    xAxis: { type: 'category', data: dates, ...makeAxis(), axisLabel: { color: '#8888aa', fontSize: 10 } },
+    yAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { color: '#2a2a4a' } }, axisLabel: { color: '#8888aa', formatter: yAxisFmt } },
+    series: [{
+      type: 'bar', data: total_list, barWidth: 20,
+      itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: '#ff8c00' },
+        { offset: 1, color: '#ff5500' }
+      ]) }
+    }]
+  });
+
+  window.addEventListener('resize', function() {
+    chart1.resize(); chart2.resize(); chart3.resize(); chart4.resize(); chart5.resize();
+  });
+})();
+</script>
+</body>
+</html>
